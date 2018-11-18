@@ -6,7 +6,7 @@ using namespace std;
 
 const int PAIR = 2;
 
-float random(int upper, int lower);
+int random(int upper, int lower);
 
 void randInfo(int &n, int &m, int &w, int &d, int* &x, int* &y, int* &r, int* &p, int start[], int end[]);
 void getInfo(int &n, int &m, int &w, int &d, int* &x, int* &y, int* &r, int* &p, int start[], int end[]);
@@ -44,9 +44,9 @@ int main()
 	return 0;
  } 
  
-float random(int lower, int upper)
+int random(int lower, int upper)
 {
-	return (upper-lower)*static_cast<float>(rand())/RAND_MAX+lower;
+	return static_cast<int>((upper-lower)*static_cast<float>(rand())/RAND_MAX)+lower;
 }
 
 void getInfo(int &n, int &m, int &w, int &d, int* &x, int* &y, int* &r, int* &p, int start[], int end[])
@@ -65,25 +65,25 @@ void getInfo(int &n, int &m, int &w, int &d, int* &x, int* &y, int* &r, int* &p,
 
 void randInfo(int &n, int &m, int &w, int &d, int* &x, int* &y, int* &r, int* &p, int start[], int end[])
 {
-	n = static_cast<int>(random(1, 1000));
-	m = static_cast<int>(random(1, (n+1)*(n+1)));
-	w = static_cast<int>(random(0, 1000));
-	d = static_cast<int>(random(n, n*n)); 
+	n = random(1, 1000);
+	m = random(1, (n+1)*(n+1));
+	w = random(0, 1000);
+	d = random(n, n*n); 
 	x = new int [m];
 	y = new int [m];
 	r = new int [m];
 	p = new int [m];
 	for(int i = 0; i < m; i++)
 	{
-		x[i] = static_cast<int>(random(0, n));
-		y[i] = static_cast<int>(random(0, n));
-		r[i] = static_cast<int>(random(0, n));
-		p[i] = static_cast<int>(random(1, 1000));
+		x[i] = random(0, n);
+		y[i] = random(0, n);
+		r[i] = random(0, n);
+		p[i] = random(1, 1000);
 	}
-	start[0] = static_cast<int>(random(0, n));
-	start[1] = static_cast<int>(random(0, n));
-	end[0] = static_cast<int>(random(0, n));
-	end[1] = static_cast<int>(random(0, n));
+	start[0] = random(0, n);
+	start[1] = random(0, n);
+	end[0] = random(0, n);
+	end[1] = random(0, n);
 }
 
 void showInfo(int n, int m, int w, int d, const int* x, const int* y, const int* r, const int* p, const int start[], const int end[])
