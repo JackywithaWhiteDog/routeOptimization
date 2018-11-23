@@ -13,8 +13,6 @@ class point
 		init(int i, int j, int r, int p);
 };
 
-const int PAIR = 2;
-
 // return a random number from lower to upper
 int random(int lower, int upper);
 
