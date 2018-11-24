@@ -1,8 +1,9 @@
 #include <iostream> // cin, cout
 #include <algorithm> // min(), max()
-#include <cmath> // sqrt(), exp()
+#include <cmath> // sqrt()
 #include <cstdlib> // rand(), srand(), RAND_MAX
 #include <ctime> // clock(), time(NULL)
+#include <climits> // INT_MAX
 using namespace std;
 
 const int MAX_CORNER = 1000000;
@@ -53,26 +54,60 @@ int main()
 	point* danPt = nullptr;
 	point start, end;
 
-	//*
+	/*
 	getInfo(mapSize, ptCnt, weight, distance, danPt, start, end);
 	/*/
 	randInfo(mapSize, ptCnt, weight, distance, danPt, start, end);
 	/**/
 	
-	for(int i = 0; i < 100; i++)
+	double startT = 1000*clock()/CLOCKS_PER_SEC;
+	double curT = 1000*clock()/CLOCKS_PER_SEC;
+	double dt = 0;
+	
+	point ans[1];
+	ans[0].init(start.x, start.y);
+	double optCost = INT_MAX;
+	
+	int cnt = 0;
+	while(curT+dt <= 1000)
 	{
-		point ans[1];
-		ans[0] = findCorner(start, end, mapSize, danPt, ptCnt, distance);
+		point temp[1];
+		temp[0] = findCorner(start, end, mapSize, danPt, ptCnt, distance);
 		//cout << "-done\n";
-		double cost = totalDanger(start, end, ans, 1, danPt, ptCnt) + weight;
+		double cost = totalDanger(start, end, temp, 1, danPt, ptCnt) + weight;
 		//cout << "-done\n";
-		cout << ans[0].x << " " << ans[0].y << " --> " << cost << "\n";
+		cout << temp[0].x << " " << temp[0].y << " --> " << cost << "\n";
+		
+		if(cost < optCost)
+		{
+			optCost = cost;
+			ans[0] = temp[0];
+		}
+		
+		cnt++;
+		dt = 1000*clock()/CLOCKS_PER_SEC - curT;
+		curT = 1000*clock()/CLOCKS_PER_SEC;
 	}
 	
+	cout << "\n";
 	cout << mapSize << " " << ptCnt << " " << weight << " " << distance << "\n";
 	cout << start.x << " " << start.y << " " << end.x << " " << end.y << "\n";
 	
-	cout << "\nstraight: " << lineDanger(start, end, danPt, ptCnt);
+	cout << "\nbest: " << ans[0].x << " " << ans[0].y << " --> " << optCost << "\n";
+	
+	double naiveCost = lineDanger(start, end, danPt, ptCnt);
+	cout << "straight: " << naiveCost << "\n";
+	if(optCost <= naiveCost)
+	{
+		cout << "SUCCESS!!!\n\n";
+	}
+	else
+	{
+		cout << "FAIL...\n\n";
+	}
+	
+	cout << "time: " << curT - startT << "\n";
+	cout << "loop: " << cnt << "\n";
 
 	
 	return 0;
