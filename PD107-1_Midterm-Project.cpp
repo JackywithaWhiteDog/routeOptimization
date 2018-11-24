@@ -9,8 +9,8 @@ class point
 	public:
 		float x, y;
 		int radius, danger;
-		init(int i, int j);
-		init(int i, int j, int r, int p);
+		void init(int i, int j);
+		void init(int i, int j, int r, int p);
 };
 
 // return a random number from lower to upper
@@ -46,14 +46,14 @@ int main()
 	return 0;
 }
 
-point::init(int i, int j)
+void point::init(int i, int j)
 {
 	x = i;
 	y = j;
 	radius = 0;
 	danger = 0;
 }
-point::init(int i, int j, int r, int p)
+void point::init(int i, int j, int r, int p)
 {
 	x = i;
 	y = j;
