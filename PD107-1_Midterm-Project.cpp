@@ -224,88 +224,101 @@ point findCorner(point from, point to, int n, point* danPt, int m, double maxD, 
 	double maxStep = 10000;
 	double curStep = maxStep;
 	double minStep = 1;
+	
+	double cost = 0, lcost = 0, rcost = 0, ucost = 0, dcost = 0;
 
-	double cost;
-
+	int scale = 1;
 
 	point corner[1];
 	if(from.x <= to.x)
-	{
 		corner[0].x = from.x + random(0, to.x-from.x);
-	}
 	else
-	{
 		corner[0].x = from.x - random(0, from.x-to.x);
-	}
 	if(from.y <= to.y)
-	{
 		corner[0].y = from.y + random(0, to.y-from.y);
-	}
 	else
-	{
-		corner[0].y = from.y - random(from.y-to.y, 0);
-	}
-	
+		corner[0].y = from.y - random(from.y-to.y, 0);	
+
 	cout << corner[0].x << " " << corner[0].y << "\n";
-	
 	cost = totalDanger(from, to, corner, 1, danPt, m);
-	
-	//cout << "opt: " << corner[0].x << " " << corner[0].y << "\n--> " << cost << "\n\n";
 
 	while(curStep > minStep)
 	{
-		//cout << corner[0].x<< "\n";
-		
-		double dx = dDanger(corner[0], danPt, m, true);
-		double dy = dDanger(corner[0], danPt, m, false);
-		
-		//cout << "dx: " << dx << "\n";
-		
-		corner[0].x -= dx*(random(0,200)/100)*(curStep/maxStep);
-		corner[0].y -= dy*(random(0,200)/100)*(curStep/maxStep);
-		
-		int cnt = 0;
-		while(!islegal(from, to, corner, 1, n, maxD))
-		{			
-			corner[0].x += dx;
-			corner[0].y += dy;
-			
-			if(cnt > 200)
-			{
-				if(corner[0].x < 0)
-				{
-					corner[0].x = random(0, n/2);	
-				}
-				else if(corner[0].x > 0)
-				{
-					corner[0].x = random(n/2, n);	
-				}
-
-				if(corner[0].y < 0)
-				{
-					corner[0].y = random(0, n/2);	
-				}
-				else if(corner[0].y > 0)
-				{
-					corner[0].y = random(n/2, n);	
-				}
-
-				break;
-			}
-			
-			dx *= 0.5;
-			dy *= 0.5;
-			
-			corner[0].x -= dx;
-			corner[0].y -= dy;
-			cnt++;
+		point rCorner[1];
+		point lCorner[1];
+		point uCorner[1];
+		point dCorner[1];
+		rCorner[0].init(corner[0].x + scale, corner[0].y);
+		lCorner[0].init(corner[0].x - scale, corner[0].y);
+		uCorner[0].init(corner[0].x, corner[0].y + scale);
+		dCorner[0].init(corner[0].x, corner[0].y - scale);
+		if(from.x <= to.x)
+		{
+			if(rCorner[0].x > to.x)
+				rCorner[0].x = -1;
+			if(lCorner[0].x < from.x)
+				lCorner[0].x = -1;
 		}
-		
-		//cout << corner[0].x << " " << corner[0].y << "\n";
-		curStep *= slowDown;
+		else
+		{
+			if(rCorner[0].x > from.x)
+				rCorner[0].x = -1;
+			if(lCorner[0].x < to.x)
+				lCorner[0].x = -1;
+		}
+		if(from.y <= to.y)
+		{
+			if(uCorner[0].y > to.y)
+				uCorner[0].y = -1;
+			if(dCorner[0].y < from.y)
+				dCorner[0].y = -1;
+		}
+		else
+		{
+			if(uCorner[0].y > from.y)
+				uCorner[0].y = -1;
+			if(dCorner[0].y < to.y)
+				dCorner[0].y = -1;
+		}
+	
+		cost = totalDanger(from, to, corner, 1, danPt, m);
+		rcost = totalDanger(from, to, rCorner, 1, danPt, m);
+		lcost = totalDanger(from, to, lCorner, 1, danPt, m);
+		ucost = totalDanger(from, to, uCorner, 1, danPt, m);
+		dcost = totalDanger(from, to, dCorner, 1, danPt, m);
+
+		double minCost = cost;
+		if((rcost < minCost) || (rcost == minCost && abs(dDanger(rCorner[0], danPt, m, true)) < abs(dDanger(corner[0], danPt, m, true))))
+		{
+			corner[0] = rCorner[0];
+			minCost = rcost;
+		}
+		if((lcost < minCost) || (lcost == minCost && abs(dDanger(lCorner[0], danPt, m, true)) < abs(dDanger(corner[0], danPt, m, true))))
+		{
+			corner[0] = lCorner[0];
+			minCost = lcost;
+		}
+		if((ucost < minCost) || (ucost == minCost && abs(dDanger(uCorner[0], danPt, m, false)) < abs(dDanger(corner[0], danPt, m, false))))
+		{
+			corner[0] = uCorner[0];
+			minCost = ucost;
+		}
+		if((dcost < minCost) || (dcost == minCost && abs(dDanger(dCorner[0], danPt, m, false)) < abs(dDanger(corner[0], danPt, m, false))))
+		{
+			corner[0] = dCorner[0];
+			minCost = dcost;
+		}
+
+		if(minCost != cost)
+			scale = 1;
+		else
+			scale++;
+
+		if(scale > 3)
+			break;
 	}
 	
-	//cout << "done\n";
+	//cout << "opt: " << corner[0].x << " " << corner[0].y << "\n--> " << cost << "\n\n";
 	
 	corner[0].x = static_cast<int>(corner[0].x);
 	corner[0].y = static_cast<int>(corner[0].y);
