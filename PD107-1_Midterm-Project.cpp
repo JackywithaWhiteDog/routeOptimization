@@ -1,500 +1,536 @@
 #include <iostream> // cin, cout
-#include <algorithm> // min(), max()
-#include <cmath> // sqrt()
+#include <vector> // vector :: reserve(), insert(), puch_back()
+#include <algorithm> // sort()
+#include <cmath> // hypot(), floor()
+#include <ctime> // time(NULL), clock(), CLOCKS_PER_SEC
 #include <cstdlib> // rand(), srand(), RAND_MAX
-#include <ctime> // clock(), time(NULL)
-#include <climits> // INT_MAX
 using namespace std;
 
-const int MAX_CORNER = 1000000;
-
-class point
+struct Point
 {
-public:
-    double x, y;
-    int radius, danger;
-    void init(double i, double j);
-    void init(double i, double j, int r, int p);
+	double x;
+	double y;
+	double r;
+	double p;
+	double distance(Point a) {return (hypot(x-a.x, y-a.y));}
+	double danger();
+	void dDanger(double& dx, double& dy);
 };
 
-// return a random number from lower to upper
-int random(int lower, int upper);
+const int MAX_CORNER = 5;
+const int MAP_RES = 300, DAN_RES = 3000;
+const double TIME_LIMIT = 950;
+const double MAX_TEMP = 1000000, MIN_TEMP = 13500, COOL_DOWN = 0.98;
 
-// input information
-void getInfo(int& n, int& m, int& w, int& d, point*& danPt, point& start, point& end);
-// randomly create information
-void randInfo(int& n, int& m, int& w, int& d, point*& danPt, point& start, point& end);
+// basic information
+int n, m, w, d;
+vector<Point> danPt;
+Point s, e;
 
-// return the distance of two point
-double distance(point a, point b);
+int unit;
 
-// return the derivative of the danger on the point(type == true -> /dx; type == false -> /dy)
-double dDanger(point pt, point* danPt, int m, bool type);
+vector<double> curDdanger;
+vector<double> curDx;
+vector<double> curDy;
+int lastChoice = 0;
 
-/*
-// find a corner on the line
-point findCorner(point from, point to, int n, point* danPt, int m, double maxD, int firstD = 1);
-*/
+vector<Point> solution;
+vector<Point> nowBest;
 
-point psoFindCorner(point start, point end, point* danPt, int m, point particles[], point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity);
+void inputInfo();
+void showInfo();
+void outputSol();
+bool ptCmpX(Point a, Point b) { return (a.x < b.x); }
+bool intCmpX(Point a, int b) { return (a.x < b); }
 
+void findPath(double maxTime);
 
-// check if the path is legal(all the point is in the map and does not exceed the distance)
-bool islegal(point start, point end, point corner[], int corCnt, int n, int d);
+int selectLine(int cnt);
+double lnDdanger(Point from, Point to, double firstD, double& dx, double& dy); // return dx^2 + dy^2
 
-// return the danger of a point
-double pointDanger(point pt, point* danPt, int m);
-// return the danger of a line
-double lineDanger(point from, point to, point* danPt, int m, double firstD = 1);
-// return the danger of a path
-double totalDanger(point start, point end, point corner[], int corCnt, point* danPt, int m);
+Point findCorner(Point from, Point to, double firstD, double maxTime); // search for best corner on a line
+
+void update(); // update nowBest
+
+double lnDanger(Point from, Point to, double firstD);
+double ttDanger(vector<Point> corner);
 
 int main()
 {
-    srand(time(NULL));
-    
-    int mapSize = 0, ptCnt = 0, weight = 0, distance = 0;
-    point* danPt = nullptr;
-    point start, end;
-    
-    //insert data
-    /*
-     getInfo(mapSize, ptCnt, weight, distance, danPt, start, end);
-     */
-    randInfo(mapSize, ptCnt, weight, distance, danPt, start, end);
-    
-    cout << start.x << " " << start.y << "\n";
-    cout << end.x << " " << end.y << "\n";
-    
-    point particles[3];
-    for (int i = 0; i < 3; i++)
-    {
-        particles[i].x = random(start.x, end.x);
-        particles[i].y = random(start.y, end.y);
-        cout << particles[i].x << " " << particles[i].y << "\n";
-    }
-    point pBCorner[3];
-    point gBCorner;
-    double pBest[3] = {10000};
-    double gBest = 10000000000;
-    point velocity = {0, 0};
-    
-    psoFindCorner(start, end, danPt, ptCnt, particles, pBCorner, gBCorner, pBest, gBest, velocity);
-    
-    cout << gBCorner.x <<  " " << gBCorner.y;
-    /*
-    double startT = 1000*clock()/CLOCKS_PER_SEC;
-    double curT = 1000*clock()/CLOCKS_PER_SEC;
-    double dt = 0;
-    
-    point ans[1];
-    ans[0].init(start.x, start.y);
-    double optCost = INT_MAX;
-    
-    int cnt = 0;
-    while(curT+dt <= 1000)
-    {
-        point temp[1];
-        temp[0] = findCorner(start, end, mapSize, danPt, ptCnt, distance);
-        //cout << "-done\n";
-        double cost = totalDanger(start, end, temp, 1, danPt, ptCnt) + weight;
-        //cout << "-done\n";
-        cout << temp[0].x << " " << temp[0].y << " --> " << cost << "\n";
-        
-        if(cost < optCost)
-        {
-            optCost = cost;
-            ans[0] = temp[0];
-        }
-        
-        cnt++;
-        dt = 1000*clock()/CLOCKS_PER_SEC - curT;
-        curT = 1000*clock()/CLOCKS_PER_SEC;
-    }
-    
-    cout << "\n";
-    cout << mapSize << " " << ptCnt << " " << weight << " " << distance << "\n";
-    cout << start.x << " " << start.y << " " << end.x << " " << end.y << "\n";
-    
-    cout << "\nbest: " << ans[0].x << " " << ans[0].y << " --> " << optCost << "\n";
-    
-    double naiveCost = lineDanger(start, end, danPt, ptCnt);
-    cout << "straight: " << naiveCost << "\n";
-    if(optCost <= naiveCost)
-    {
-        cout << "SUCCESS!!!\n\n";
-    }
-    else
-    {
-        cout << "FAIL...\n\n";
-    }
-    
-    cout << "time: " << curT - startT << "\n";
-    cout << "loop: " << cnt << "\n";
-    */
-    
-    return 0;
+	srand(time(NULL));
+
+	inputInfo();
+	// showInfo(); // for check
+	
+	//double startTime = 1000*clock()/CLOCKS_PER_SEC;
+	double curTime = 1000*clock()/CLOCKS_PER_SEC;
+
+	while(curTime < TIME_LIMIT)
+	{
+		findPath(TIME_LIMIT - curTime);
+		curTime = 1000*clock()/CLOCKS_PER_SEC;
+	}
+
+	outputSol();
+
+	return 0;
 }
 
-void point::init(double i, double j)
+double Point::danger()
 {
-    x = i;
-    y = j;
-    radius = 0;
-    danger = 0;
-}
-void point::init(double i, double j, int r, int p)
-{
-    x = i;
-    y = j;
-    radius = r;
-    danger = p;
+	double dan = 0;
+	int center = lower_bound(danPt.begin(), danPt.end(), x, intCmpX) - danPt.begin();
+
+	for(int i = center-DAN_RES; i <= center+DAN_RES; i++)	
+		if(i >= 0 && i < m)
+			if(distance(danPt[i]) < danPt[i].r)
+				dan += danPt[i].p * (danPt[i].r - distance(danPt[i])) / danPt[i].r;
+
+	return dan;
 }
 
-// return a random number from lower to upper
-int random(int lower, int upper)
+void Point::dDanger(double& dx, double& dy)
 {
-    return static_cast<int>((upper-lower)*static_cast<double>(rand())/RAND_MAX+lower);
+	int center = lower_bound(danPt.begin(), danPt.end(), x, intCmpX) - danPt.begin();
+
+	for(int i = center-DAN_RES; i <= center+DAN_RES; i++)	
+		if(i >= 0 && i < m)
+			if(distance(danPt[i]) < danPt[i].r)
+			{
+				dx += danPt[i].p * (- (x - danPt[i].x)/distance(danPt[i])) / danPt[i].r;
+				dy += danPt[i].p * (- (y - danPt[i].y)/distance(danPt[i])) / danPt[i].r;
+			}
 }
 
-// input information
-void getInfo(int& n, int& m, int& w, int& d, point*& danPt, point& start, point& end)
+void inputInfo()
 {
-    cin >> n >> m >> w >> d;
-    
-    danPt = new point [m];
-    for(int i = 0; i < m; i++)
-    {
-        cin >> danPt[i].x;
-    }
-    for(int i = 0; i < m; i++)
-    {
-        cin >> danPt[i].y;
-    }
-    for(int i = 0; i < m; i++)
-    {
-        cin >> danPt[i].radius;
-    }
-    for(int i = 0; i < m; i++)
-    {
-        cin >> danPt[i].danger;
-    }
-    
-    
-    cin >> start.x >> start.y >> end.x >> end.y;
-    
-    start.init(start.x, start.y);
-    end.init(end.x, end.y);
+	cin >> n >> m >> w >> d;
+
+	danPt.reserve(m);
+	for(int i = 0; i < m; i++)
+	{
+		cin >> danPt[i].x;
+	}
+	for(int i = 0; i < m; i++)
+	{
+		cin >> danPt[i].y;
+	}
+	for(int i = 0; i < m; i++)
+	{
+		cin >> danPt[i].r;
+	}
+	for(int i = 0; i < m; i++)
+	{
+		cin >> danPt[i].p;
+	}
+
+	cin >> s.x >> s.y >> e.x >> e.y;
+
+	unit = n/MAP_RES + 1;
+	sort(danPt.begin(), danPt.end(), ptCmpX);
 }
 
-// randomly create information
-void randInfo(int& n, int& m, int& w, int& d, point*& danPt, point& start, point& end)
+void showInfo()
 {
-    n = random(1, 1000);
-    m = random(1, min((n+1)*(n+1), 10000));
-    w = random(0, 1000);
-    
-    danPt = new point [m];
-    
-    for(int i = 0; i < m; i++)
-    {
-        danPt[i].init(random(0,n), random(0,n), random(0,n), random(1,1000));
-    }
-    
-    start.init(random(0,n), random(0,n));
-    end.init(random(0,n), random(0,n));
-    
-    d = random(max(n, static_cast<int>(distance(start, end))+1), min(10*n, static_cast<int>(distance(start, end))+1));
+	cout << "\n<check_start>\n";
+	cout << n << " " << m << " " << w << " " << d << "\n";
+	for(int i = 0; i < m; i++)
+		cout << danPt[i].x << " " << danPt[i].y << " " << danPt[i].r << " " << danPt[i].p << "\n";
+	cout << s.x << " " << s.y << " " << e.x << " " << e.y;
+	cout << "\n<check_complete>\n\n";
 }
 
-// return the distance of two point
-double distance(point a, point b)
+void outputSol()
 {
-    return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
+	cout << nowBest.size();
+	for(unsigned int i = 0; i < nowBest.size(); i++)
+		cout << " " << nowBest[i].x << " "  << nowBest[i].y;
 }
 
-point psoFindCorner(point start, point end, point* danPt, int m, point particles[], point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity)
+void findPath(double maxTime)
 {
-    int c1 = 1, c2 = 1;//can modify
-    double w = 0.6;
-    do
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            //calculate
-            if (totalDanger(start, end, &particles[i], 1, danPt, m) <= pBest[i])
-            {
-                pBest[i] = totalDanger(start, end, &particles[i], 1, danPt, m);
-                pBCorner[i].x = particles[i].x;
-                pBCorner[i].y = particles[i].y;
-            }//update PBEST if required
-            if (totalDanger(start, end, &particles[i], 1, danPt, m) <= gBest)
-            {
-                gBest = totalDanger(start, end, &particles[i], 1, danPt, m);
-                gBCorner.x = particles[i].x;
-                gBCorner.y = particles[i].y;
-                //cout << gBCorner.x << " " << gBCorner.y << "\n";
-            }//update GBEST if required
-            //cout << totalDanger(start, end, &particles[i], 1, danPt, m) << "\n";
-        }
-        //cout << gBCorner.x << " " << gBCorner.y << "\n";
-        w = w - w * 0.1;
-        //update weight
-        for (int i = 0; i < 3; i++)
-        {
-            //update velocity
-            velocity.x = w * velocity.x + c1 * (pBCorner[i].x - particles[i].x) + c2 * (gBCorner.x - particles[i].x);
-            velocity.y = w * velocity.y + c1 * (pBCorner[i].y - particles[i].y) + c2 * (gBCorner.y - particles[i].y);
-            //update position
-            particles[i].x = particles[i].x + velocity.x;
-            particles[i].y = particles[i].y + velocity.y;
-        }
-    }
-    while(gBest > 10);
-    return gBCorner;
+	double startTime = 1000*clock()/CLOCKS_PER_SEC;
+	double dTime = 0;
+	int cnt = 0;
+	double curTime = 1000*clock()/CLOCKS_PER_SEC;
+	double onceTime;
+	while(cnt <= MAX_CORNER && (curTime + dTime) - startTime < maxTime)
+	{
+		//cout << "\ncnt = " << cnt << "\n";
+		if(cnt == 0)
+		{
+			curDx.assign(1, 0);
+			curDy.assign(1, 0);
+			lnDdanger(s, e, unit, curDx[0], curDy[0]);
+			double now = 1000*clock()/CLOCKS_PER_SEC;
+			onceTime = (maxTime-now)/(MAX_CORNER-cnt);
+			Point pt = findCorner(s, e, unit, onceTime);
+			if(pt.x >= 0 && pt.y >= 0)
+				solution.insert(solution.begin(), pt);
+			else
+				break;
+		}
+		else
+		{
+			int choice = selectLine(cnt);
+			//cout << "choice = " << choice << "\n";
+			if(choice == 0)
+			{
+				double now = 1000*clock()/CLOCKS_PER_SEC;
+				onceTime = (maxTime-now)/(MAX_CORNER-cnt);
+				Point pt = findCorner(s, solution[0], unit, onceTime);
+				if(pt.x >= 0 && pt.y >= 0)
+					solution.insert(solution.begin(), pt);
+				else
+					break;
+			}
+			else if(choice == cnt)
+			{
+				double firstD = unit*(static_cast<int>(solution[cnt-2].distance(solution[cnt-1]))/unit + 1) - solution[cnt-2].distance(solution[cnt-1]);
+				double now = 1000*clock()/CLOCKS_PER_SEC;
+				onceTime = (maxTime-now)/(MAX_CORNER-cnt);
+				Point pt = findCorner(solution[cnt-1], e, firstD, onceTime);
+				if(pt.x >= 0 && pt.y >= 0)
+					solution.push_back(pt);
+				else
+					break;
+			}
+			else
+			{
+				double firstD = unit*(static_cast<int>(solution[choice-2].distance(solution[choice-1]))/unit + 1) - solution[choice-2].distance(solution[choice-1]);
+				double now = 1000*clock()/CLOCKS_PER_SEC;
+				onceTime = (maxTime-now)/(MAX_CORNER-cnt);
+				Point pt = findCorner(solution[choice-1], solution[choice], firstD, onceTime);
+				if(pt.x >= 0 && pt.y >= 0)
+					solution.insert(solution.begin()+choice, pt);
+				else
+					break;
+			}
+		}
+		
+		update();
+		cnt++;
+	}
+
+		cnt++;
+		dTime = 1000*clock()/CLOCKS_PER_SEC - curTime;
+		curTime = 1000*clock()/CLOCKS_PER_SEC;
 }
 
-/*
-// return the derivative of the danger on the point
-double dDanger(point pt, point* danPt, int m, bool type)
+int selectLine(int cnt)
 {
-    double deri = 0;
-    for(int i = 0; i < m; i++)
-    {
-        if(distance(pt, danPt[i]) < danPt[i].radius)
-        {
-            double d = distance(pt, danPt[i]);
-            if(d == 0)
-            {
-                d = 1;
-            }
-            if(type == true)
-            {
-                deri += -(danPt[i].danger)*(pt.x - danPt[i].x)/(danPt[i].radius*d);
-            }
-            else
-            {
-                deri += -(danPt[i].danger)*(pt.y - danPt[i].y)/(danPt[i].radius*d);
-            }
-        }
-    }
-    
-    return deri;
-}
-*/
+	double tempDx[2] = {0}, tempDy[2] = {0};
 
-/*
-// find a corner on the line
-point findCorner(point from, point to, int n, point* danPt, int m, double maxD, int firstD)
-{
-    double slowDown = 0.95;
-    double maxStep = 10000;
-    double curStep = maxStep;
-    double minStep = 1;
-    
-    double cost;
-    
-    
-    point corner[1];
-    if(from.x <= to.x)
-    {
-        corner[0].x = from.x + random(0, to.x-from.x);
-    }
-    else
-    {
-        corner[0].x = from.x - random(0, from.x-to.x);
-    }
-    if(from.y <= to.y)
-    {
-        corner[0].y = from.y + random(0, to.y-from.y);
-    }
-    else
-    {
-        corner[0].y = from.y - random(from.y-to.y, 0);
-    }
-    
-    cout << corner[0].x << " " << corner[0].y << "\n";
-    
-    cost = totalDanger(from, to, corner, 1, danPt, m);
-    
-    //cout << "opt: " << corner[0].x << " " << corner[0].y << "\n--> " << cost << "\n\n";
-    
-    while(curStep > minStep)
-    {
-        //cout << corner[0].x<< "\n";
-        
-        double dx = dDanger(corner[0], danPt, m, true);
-        double dy = dDanger(corner[0], danPt, m, false);
-        
-        //cout << "dx: " << dx << "\n";
-        
-        corner[0].x -= dx*(random(0,200)/100)*(curStep/maxStep);
-        corner[0].y -= dy*(random(0,200)/100)*(curStep/maxStep);
-        
-        int cnt = 0;
-        while(!islegal(from, to, corner, 1, n, maxD))
-        {
-            corner[0].x += dx;
-            corner[0].y += dy;
-            
-            if(cnt > 200)
-            {
-                if(corner[0].x < 0)
-                {
-                    corner[0].x = random(0, n/2);
-                }
-                else if(corner[0].x > 0)
-                {
-                    corner[0].x = random(n/2, n);
-                }
-                
-                if(corner[0].y < 0)
-                {
-                    corner[0].y = random(0, n/2);
-                }
-                else if(corner[0].y > 0)
-                {
-                    corner[0].y = random(n/2, n);
-                }
-                
-                break;
-            }
-            
-            dx *= 0.5;
-            dy *= 0.5;
-            
-            corner[0].x -= dx;
-            corner[0].y -= dy;
-            cnt++;
-        }
-        
-        //cout << corner[0].x << " " << corner[0].y << "\n";
-        curStep *= slowDown;
-    }
-    
-    //cout << "done\n";
-    
-    corner[0].x = static_cast<int>(corner[0].x);
-    corner[0].y = static_cast<int>(corner[0].y);
-    
-    //cout << "done\n";
-    
-    return corner[0];
-}
-*/
+	double firstD;
+	if(cnt == 1)
+	{
+		curDdanger.reserve(2);
+		if(s.distance(solution[0]) > unit)
+		{
+			curDdanger[0] = lnDdanger(s, solution[0], unit, tempDx[0], tempDy[0]);
+			firstD = unit*(static_cast<int>(s.distance(solution[0]))/unit + 1) - s.distance(solution[0]);
+		}
+		else
+		{
+			curDdanger[0] = 0;
+			firstD = unit - s.distance(solution[0]);
+		}
+		
+		if(solution[0].distance(e) > firstD)
+			curDdanger[1] = lnDdanger(solution[0], e, firstD, tempDx[1], tempDy[1]);
+		else
+			curDdanger[1] = 0;
+	}
+	else
+	{
+		//cout << "lastChoice: " << lastChoice << "\n" ;
+		switch(lastChoice)
+		{
+			case 0:
+			{
+				if(s.distance(solution[0]) > unit)
+					curDdanger[0] = lnDdanger(s, solution[0], unit, tempDx[0], tempDy[0]);
+				else
+					curDdanger[0] = 0;
+				//cout << "done\n";
+				break;
+			}
+			case 1:
+			{
+				firstD = unit*(static_cast<int>(s.distance(solution[0]))/unit + 1) - s.distance(solution[0]);
+				//cout << "firstD: " << firstD << "\n";
+				//cout << "solution[0] ~ solution[1]: " << solution[0].distance(solution[1]) << "\n";
+				if(solution[0].distance(solution[1]) > firstD)
+					curDdanger[1] = lnDdanger(solution[0], solution[1], firstD, tempDx[0], tempDy[0]);
+				else
+					curDdanger[1] = 0;
+				//cout << "done\n";
+				break;
+			}
+			default:
+			{
+				firstD = unit*(static_cast<int>(solution[lastChoice-2].distance(solution[lastChoice-1]))/unit + 1) - solution[lastChoice-2].distance(solution[lastChoice-1]);
+				if(solution[lastChoice-1].distance(solution[lastChoice]) > firstD)
+					curDdanger[lastChoice] = lnDdanger(solution[lastChoice-1], solution[lastChoice], firstD, tempDx[0], tempDy[0]);
+				else
+					curDdanger[lastChoice] = 0;
+				//cout << "done\n";
+				break;
+			}
+		}
 
-// check if the path is legal(all the point is in the map and does not exceed the distance)
-bool islegal(point start, point end, point corner[], int corCnt, int n, int d)
-{
-    for(int i = 0; i < corCnt; i++)
-    {
-        if(corner[i].x < 0 || corner[i].x > n || corner[i].y < 0 || corner[i].y > n)
-        {
-            //cout << "--out of map--\n";
-            return false;
-        }
-    }
-    
-    double totalD = 0;
-    totalD += distance(start, corner[0]);
-    for(int i = 1; i < corCnt-1; i++)
-    {
-        totalD += distance(corner[i], corner[i+1]);
-    }
-    totalD += distance(corner[corCnt-1], end);
-    
-    if(totalD > d)
-    {
-        //cout << "--too far--\n";
-        return false;
-    }
-    else
-    {
-        //cout << "--legal--\n";
-        return true;
-    }
+
+		if(lastChoice == 0)
+		{
+			firstD = unit*(static_cast<int>(s.distance(solution[0]))/unit + 1) - s.distance(solution[0]);
+			if(solution[0].distance(solution[1]) > firstD)
+				curDdanger.insert(curDdanger.begin()+1, lnDdanger(solution[0], solution[1], firstD, tempDx[1], tempDy[1]));
+			else
+				curDdanger.insert(curDdanger.begin()+1, 0);
+			//cout << "done\n";
+		}
+		else if(lastChoice == cnt-1)
+		{
+			firstD = unit*(static_cast<int>(solution[cnt-2].distance(solution[cnt-1]))/unit + 1) - solution[cnt-2].distance(solution[cnt-1]);
+			if(solution[cnt-1].distance(e) > firstD)
+				curDdanger.push_back(lnDdanger(solution[cnt-1], e, firstD, tempDx[1], tempDy[1]));
+			else
+				curDdanger.push_back(0);
+			//cout << "done\n";
+		}
+		else
+		{
+			firstD = unit*(static_cast<int>(solution[lastChoice-1].distance(solution[lastChoice]))/unit + 1) - solution[lastChoice-1].distance(solution[lastChoice]);
+			if(solution[lastChoice].distance(solution[lastChoice+1]) > firstD)
+			{
+				//cout << "do\n";
+				curDdanger.insert(curDdanger.begin()+(lastChoice+1), lnDdanger(solution[lastChoice], solution[lastChoice+1], firstD, tempDx[1], tempDy[1]));
+			}
+			else
+			{
+				//cout << "dont\n";
+				curDdanger.insert(curDdanger.begin()+(lastChoice+1), 0);
+			}
+			//cout << "done\n";
+		}
+	}
+
+	curDx.insert(curDx.begin()+lastChoice, tempDx[0]);
+	curDx.insert(curDx.begin()+lastChoice+1, tempDx[1]);
+	curDy.insert(curDy.begin()+lastChoice, tempDy[0]);
+	curDy.insert(curDy.begin()+lastChoice+1, tempDy[1]);
+
+	cnt++;
+
+	int choice = 0;
+	double maxDD = 0;
+	for(int i = 0; i < cnt; i++)
+	{
+		if(curDdanger[i] > maxDD)
+		{
+			choice = i;
+			maxDD = curDdanger[i];
+		}
+	}
+
+	lastChoice = choice;
+	return choice;
 }
 
-// return the danger of a point
-double pointDanger(point pt, point* danPt, int m)
+double lnDdanger(Point from, Point to, double firstD, double& dx, double& dy) // return dx^2 + dy^2
 {
-    //cout << "--start\n";
-    double ptDanger = 0;
-    for(int i = 0; i < m; i++)
-    {
-        // if the position is in the influence radius of dangerous point, add the danger
-        if(distance(pt, danPt[i]) < danPt[i].radius)
-        {
-            // danger (with one dangerous point) = (degree of danger) * [(radius) - (distance)] / (radius)
-            ptDanger += danPt[i].danger * (danPt[i].radius - distance(pt, danPt[i])) / danPt[i].radius;
-        }
-    }
-    //cout << "--done\n";
-    return ptDanger;
+	double d = from.distance(to);
+	int checkCnt = floor((d-firstD)/unit);
+
+	Point checkPt;
+	if(firstD != 0)
+	{
+		checkPt = {from.x + (to.x-from.x)*firstD/d, from.y + (to.y-from.y)*firstD/d};
+		if(checkPt.x != e.x || checkPt.y != e.y)
+			checkPt.dDanger(dx, dy);
+	}
+
+	for(int i = 1; i < checkCnt; i++)
+	{
+		checkPt = {checkPt.x + (to.x-from.x)*unit/d, checkPt.y + (to.y-from.y)*unit/d};
+
+		if(checkPt.x == e.x && checkPt.y == e.y)
+			break;
+		else
+			checkPt.dDanger(dx, dy);
+	}
+	
+	return hypot(dx, dy);
+}
+
+Point findCorner(Point from, Point to, double firstD, double maxTime) // search for best corner on a line
+{
+	//cout << "<findCorner>\n";
+	//cout << from.x << " " << from.y << " " << to.x << " " << to.y << "\n";
+	double startTime = 1000*clock()/CLOCKS_PER_SEC;
+	double dTime = 0;
+	double temper = MAX_TEMP;
+	
+	double dist = from.distance(to);
+	
+	double newX;
+	double newY;
+	bool isNew = true;
+	
+	Point corner;
+	int loopCnt = 0;
+	do
+	{
+		loopCnt++;
+		//cout << "dowhile: " << loopCnt+1 << "\n";
+		newX = floor(from.x + (to.x-from.x)*(1.0*rand()/RAND_MAX) - loopCnt*unit*curDx[lastChoice]+0.5);
+		newY = floor(from.y + (to.y-from.y)*(1.0*rand()/RAND_MAX) - loopCnt*unit*curDy[lastChoice]+0.5);
+
+		if(newX < 0)
+			newX = 0;
+		else if(newX > n)
+			newX = n;
+		if(newY < 0)
+			newY = 0;
+		else if(newY > n)
+			newY = n;
+		
+		if((newX == s.x && newY == s.y) || (newX == e.x && newY == e.y))
+			isNew = false;
+		if(isNew)
+		{
+			for(unsigned int i = 0; i < solution.size(); i++)
+				if(newX == solution[i].x && newY == solution[i].y)
+				{
+					isNew = false;
+					break;
+				}
+		}
+		
+		if(loopCnt > 10000)
+		{
+			corner = {-1, -1};
+			return corner;
+		}
+		
+	}while(!isNew);
+
+	
+	corner = {newX, newY};
+
+	double curTime = 1000*clock()/CLOCKS_PER_SEC;
+	while(temper > MIN_TEMP && (curTime-startTime) + dTime < maxTime)
+	{
+		double dx = 0, dy = 0;
+		lnDdanger(from, corner, firstD, dx, dy);
+		firstD = unit*(static_cast<int>(from.distance(corner)/unit + 1)) - from.distance(corner);
+		lnDdanger(corner, to, firstD, dx, dy);
+
+		newX = floor(corner.x - unit*dx*(1.0*rand()/RAND_MAX)*(temper/MAX_TEMP)*dist*0.5 + 0.5);
+		newY = floor(corner.y - unit*dy*(1.0*rand()/RAND_MAX)*(temper/MAX_TEMP)*dist*0.5 + 0.5);
+		
+		if(newX < 0)
+			newX = 0;
+		else if(newX > n)
+			newX = n;
+		if(newY < 0)
+			newY = 0;
+		else if(newY > n)
+			newY = n;
+		
+		isNew = true;
+		if((newX == s.x && newY == s.y) || (newX == e.x && newY == e.y))
+			isNew = false;
+		if(isNew)
+		{
+			for(unsigned int i = 0; i < solution.size(); i++)
+				if(newX == solution[i].x && newY == solution[i].y)
+				{
+					isNew = false;
+					break;
+				}
+			if(isNew)
+				corner = {newX, newY};
+		}
+
+		temper *= COOL_DOWN;
+		dTime = 1000*clock()/CLOCKS_PER_SEC - curTime;
+		curTime = 1000*clock()/CLOCKS_PER_SEC;
+	}
+
+	return corner;
+}
+
+void update() // update nowBest
+{
+//	cout << "<update>\n";
+//	for(int i = 0; i < solution.size(); i++)
+//		cout << solution[i].x << " " << solution[i].y << " ";
+	//cout << "\n--> " << ttDanger(solution) << "\n";
+	
+	//cout << "nowBest: " << ttDanger(nowBest) << "\n";
+	if(ttDanger(solution) < ttDanger(nowBest))
+		nowBest.assign(solution.begin(), solution.end());
 }
 
 // return the danger of a line
-double lineDanger(point from, point to, point* danPt, int m, double firstD)
+double lnDanger(Point from, Point to, double firstD)
 {
-    //cout << "-start\n";
-    double d = distance(from, to);
-    
-    //cout << "d = " << d << "\n";
-    
-    int checkCnt = 0;
-    double lnDanger = 0;
-    if(d >= 1)
-    {
-        checkCnt = static_cast<int>(d - firstD) + 1;
-        
-        cout << "d = " << d << "\n";
-        cout << "firstD = " << firstD << "\n";
-        cout << "cnt = " << checkCnt << "\n";
-        
-        point* checkPt = new point [checkCnt];
-        
-        checkPt[0].init(from.x+(firstD/d)*(to.x - from.x), from.y+(firstD/d)*(to.y - from.y));
-        for(int i = 1; i < checkCnt; i++)
-        {
-            checkPt[i].init(checkPt[i-1].x+(static_cast<double>(to.x - from.x)/d), checkPt[i-1].y+(static_cast<double>(to.y - from.y)/d));
-            //cout << "(" << checkPt[i].x << ", " << checkPt[i].y << ") ";
-        }
-        
-        //cout << "\n";
-        
-        for(int i = 0; i < checkCnt; i++)
-        {
-            lnDanger += pointDanger(checkPt[i], danPt, m);
-        }
-        
-        delete [] checkPt;
-        
-    }
-    
-    
-    return lnDanger;
+	//cout << "\n<lnDanger>\n";
+	double d = from.distance(to);
+	//cout << "d = " << d << "\n";
+	
+	int checkCnt = floor((d-firstD)/unit) + 1;
+
+	double lnDan = 0;
+
+	Point checkPt = {from.x + (to.x-from.x)*firstD/d, from.y + (to.y-from.y)*firstD/d};
+	lnDan += checkPt.danger();
+
+	for(int i = 1; i < checkCnt; i++)
+	{
+		checkPt = {checkPt.x + (to.x-from.x)*unit/d, checkPt.y + (to.y-from.y)*unit/d};
+
+		if(checkPt.x == e.x && checkPt.y == e.y)
+			break;
+		else
+			lnDan += checkPt.danger();
+	}
+
+	
+	return lnDan;
 }
 
-// return the danger of a path
-double totalDanger(point start, point end, point corner[], int corCnt, point* danPt, int m)
+double ttDanger(vector<Point> corner)
 {
-    //cout << "start\n";
-    double ttDanger = 0;	
-    ttDanger += lineDanger(start, corner[0], danPt, m);
-    
-    double d = distance(start, corner[0]);
-    //cout << "d = " << d << "\n";
-    double firstD = 1 - (d - static_cast<int>(d));
-    //cout << "firstD = " << firstD << "\n";
-    for(int i = 0; i < corCnt-1; i++)
-    {
-        ttDanger += lineDanger(corner[i], corner[i+1], danPt, m, firstD);
-        d = distance(corner[i], corner[i+1]);
-        firstD = 1 - (d - static_cast<int>(d));
-        //cout << "firstD = " << firstD << "\n";
-    }
-    ttDanger += lineDanger(corner[corCnt-1], end, danPt, m, firstD);
-    
-    return ttDanger;
-    
+	//cout << "\n<ttDanger>\n";
+	double ttDan = 0;
+
+	if(corner.size() == 0)
+		ttDan = lnDanger(s, e, unit);
+	else
+	{
+		ttDan += lnDanger(s, corner.front(), unit);
+
+		double firstD = unit*(static_cast<int>(s.distance(corner[0]))/unit + 1) - s.distance(corner[0]);
+		for(unsigned int i = 0; i < corner.size()-1; i++)
+		{
+			double d = corner[i].distance(corner[i+1]);
+			if(d <= firstD)
+			{
+				firstD -= d;
+				continue;
+			}
+			else
+			{
+				ttDan += lnDanger(corner[i], corner[i+1], firstD);
+				firstD = unit*(static_cast<int>(d - firstD)/unit + 1) - (d - firstD);
+			}
+		}
+		ttDan += lnDanger(corner.back(), e, firstD);
+	}
+
+	ttDan += w * corner.size();
+
+	return ttDan;
 }
