@@ -36,7 +36,7 @@ double dDanger(point pt, point* danPt, int m, bool type);
 point findCorner(point from, point to, int n, point* danPt, int m, double maxD, int firstD = 1);
 */
 
-point psoFindCorner(point start, point end, point* danPt, int m, point particles[], point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity);
+point psoFindCorner(point start, point end, point* danPt, int m, point particles[], point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity, double startT);
 
 
 // check if the path is legal(all the point is in the map and does not exceed the distance)
@@ -58,35 +58,37 @@ int main()
     point start, end;
     
     //insert data
-    /*
-     getInfo(mapSize, ptCnt, weight, distance, danPt, start, end);
-     */
-    randInfo(mapSize, ptCnt, weight, distance, danPt, start, end);
     
-    cout << start.x << " " << start.y << "\n";
-    cout << end.x << " " << end.y << "\n";
+    getInfo(mapSize, ptCnt, weight, distance, danPt, start, end);
+    
+    //randInfo(mapSize, ptCnt, weight, distance, danPt, start, end);
+    
+    //cout << start.x << " " << start.y << "\n";
+    //cout << end.x << " " << end.y << "\n";
     
     point particles[3];
     for (int i = 0; i < 3; i++)
     {
         particles[i].x = random(start.x, end.x);
         particles[i].y = random(start.y, end.y);
-        cout << particles[i].x << " " << particles[i].y << "\n";
+        //cout << particles[i].x << " " << particles[i].y << "\n";
     }
     point pBCorner[3];
     point gBCorner;
     double pBest[3] = {10000};
     double gBest = 10000000000;
     point velocity = {0, 0};
-    
-    psoFindCorner(start, end, danPt, ptCnt, particles, pBCorner, gBCorner, pBest, gBest, velocity);
-    
-    cout << gBCorner.x <<  " " << gBCorner.y;
-    /*
     double startT = 1000*clock()/CLOCKS_PER_SEC;
-    double curT = 1000*clock()/CLOCKS_PER_SEC;
-    double dt = 0;
     
+    psoFindCorner(start, end, danPt, ptCnt, particles, pBCorner, gBCorner, pBest, gBest, velocity, startT);
+    
+    cout << "1" << " " << gBCorner.x <<  " " << gBCorner.y;
+    
+    
+    //double curT = 1000*clock()/CLOCKS_PER_SEC;
+    //double dt = 0;
+    
+    /*
     point ans[1];
     ans[0].init(start.x, start.y);
     double optCost = INT_MAX;
@@ -213,10 +215,11 @@ double distance(point a, point b)
     return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
 }
 
-point psoFindCorner(point start, point end, point* danPt, int m, point particles[], point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity)
+point psoFindCorner(point start, point end, point* danPt, int m, point particles[], point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity, double startT)
 {
     int c1 = 1, c2 = 1;//can modify
     double w = 0.6;
+    double curT = 0;
     do
     {
         for (int i = 0; i < 3; i++)
@@ -249,8 +252,9 @@ point psoFindCorner(point start, point end, point* danPt, int m, point particles
             particles[i].x = particles[i].x + velocity.x;
             particles[i].y = particles[i].y + velocity.y;
         }
+        curT = 1000*clock()/CLOCKS_PER_SEC;
     }
-    while(gBest > 10);
+    while(curT - startT < 900);
     return gBCorner;
 }
 
@@ -447,9 +451,11 @@ double lineDanger(point from, point to, point* danPt, int m, double firstD)
     {
         checkCnt = static_cast<int>(d - firstD) + 1;
         
+        /*
         cout << "d = " << d << "\n";
         cout << "firstD = " << firstD << "\n";
         cout << "cnt = " << checkCnt << "\n";
+        */
         
         point* checkPt = new point [checkCnt];
         
