@@ -13,7 +13,7 @@
 #include <climits> // INT_MAX
 using namespace std;
 
-const int MAX_CORNER = 1000000;
+///const int MAX_CORNER = 1000000;
 
 class point
 {
@@ -45,7 +45,7 @@ double dDanger(point pt, point* danPt, int m, bool type);
 point findCorner(point from, point to, int n, point* danPt, int m, double maxD, int firstD = 1);
 */
 
-point psoFindCorner(point start, point end, point* danPt, int m, point particles[], point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity, double startT, int dist);
+point psoFindCorner(point start, point end, point* danPt, int m, point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity, double startT, int dist);
 
 
 // check if the path is legal(all the point is in the map and does not exceed the distance)
@@ -77,15 +77,7 @@ int main()
     //cout << start.x << " " << start.y << "\n";
     //cout << end.x << " " << end.y << "\n";
     
-    point particles[3];
-    double m = 0;
-    m = (end.y - start.y) / (end.x - start.x);
-    for (int i = 0; i < 3; i++)
-    {
-        particles[i].x = random(start.x, end.x);
-        particles[i].y = static_cast<int>(m * particles[i].x + start.y);
-        //cout << particles[i].x << " " << particles[i].y << "\n";
-    }
+    
     point pBCorner[3];
     point gBCorner;
     double pBest[3] = {10000};
@@ -93,7 +85,7 @@ int main()
     point velocity = {0, 0};
     
     
-    psoFindCorner(start, end, danPt, ptCnt, particles, pBCorner, gBCorner, pBest, gBest, velocity, startT, dist);
+    psoFindCorner(start, end, danPt, ptCnt, pBCorner, gBCorner, pBest, gBest, velocity, startT, dist);
     gBest = gBest + weight;
     
     
@@ -102,12 +94,12 @@ int main()
     bool a = 0;
     if (lineDanger(start, gBCorner, danPt, ptCnt, 1) <= lineDanger(gBCorner, end, danPt, ptCnt, 1))
     {
-        psoFindCorner(gBCorner, end, danPt, ptCnt, particles, pBCorner, gBCorner2, pBest, gBest2, velocity, startT, dist);
+        psoFindCorner(gBCorner, end, danPt, ptCnt, pBCorner, gBCorner2, pBest, gBest2, velocity, startT, dist);
         a = 1;
     }
     else
     {
-        psoFindCorner(start, gBCorner, danPt, ptCnt, particles, pBCorner, gBCorner2, pBest, gBest2, velocity, startT, dist);
+        psoFindCorner(start, gBCorner, danPt, ptCnt, pBCorner, gBCorner2, pBest, gBest2, velocity, startT, dist);
         a = 0;
     }
     
@@ -118,9 +110,19 @@ int main()
     if (smallest == gBest)
         cout << "1" << " " << gBCorner.x <<  " " << gBCorner.y;
     else if (smallest == gBest2 && a == 1)
-        cout << "2" << " " << gBCorner.x << " " << gBCorner.y << " " << gBCorner2.x << " " << gBCorner2.y;
+    {
+        if (gBCorner2.x == gBCorner.x && gBCorner2.y == gBCorner.y)
+            cout << "1" << " " << gBCorner.x <<  " " << gBCorner.y;
+        else
+            cout << "2" << " " << gBCorner.x << " " << gBCorner.y << " " << gBCorner2.x << " " << gBCorner2.y;
+    }
     else if (smallest == gBest2 && a == 0)
-        cout << "2" << " " << gBCorner2.x << " " << gBCorner2.y << " " << gBCorner.x << " " << gBCorner.y;
+    {
+        if (gBCorner2.x == gBCorner.x && gBCorner2.y == gBCorner.y)
+            cout << "1" << " " << gBCorner.x <<  " " << gBCorner.y;
+        else
+            cout << "2" << " " << gBCorner2.x << " " << gBCorner2.y << " " << gBCorner.x << " " << gBCorner.y;
+    }
     else
         cout << "0";
     
@@ -265,13 +267,22 @@ double distance(point a, point b)
     return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
 }
 
-point psoFindCorner(point start, point end, point* danPt, int m, point particles[], point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity, double startT, int dist)
+point psoFindCorner(point start, point end, point* danPt, int m, point pBCorner[], point &gBCorner, double pBest[], double &gBest, point &velocity, double startT, int dist)
 {
+    point particles[3];
+    double b = 0;
+    b = (end.y - start.y) / (end.x - start.x);
+    for (int i = 0; i < 3; i++)
+    {
+        particles[i].x = random(start.x, end.x);
+        particles[i].y = static_cast<int>(b * particles[i].x + start.y);
+        //cout << particles[i].x << " " << particles[i].y << "\n";
+    }
     int c1 = 1, c2 = 1;//can modify
     double we = 0.6;
     double curT = 1000*clock()/CLOCKS_PER_SEC;
     double dT = 0;
-    while(dT + curT - startT < 900)
+    while(dT + curT - startT < 400)
     {
         for (int i = 0; i < 3; i++)
         {
