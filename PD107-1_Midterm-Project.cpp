@@ -231,15 +231,23 @@ point findCorner(point from, point to, int n, point* danPt, int m, double maxD, 
 
 	point corner[1];
 	if(from.x <= to.x)
+	{
 		corner[0].x = from.x + random(0, to.x-from.x);
+		if(from.y <= to.y)
+			corner[0].y = from.y + (corner[0].x - from.x) * (to.y- from.y) / (to.x - from.x);
+		else
+			corner[0].y = from.y - (corner[0].x - from.x) * (from.y- to.y) / (to.x - from.x);
+	}
 	else
+	{
 		corner[0].x = from.x - random(0, from.x-to.x);
-	if(from.y <= to.y)
-		corner[0].y = from.y + random(0, to.y-from.y);
-	else
-		corner[0].y = from.y - random(from.y-to.y, 0);	
+		if(from.y <= to.y)
+			corner[0].y = from.y + (from.x - corner[0].x) * (to.y- from.y) / (from.x - to.x);
+			corner[0].y = from.y - (from.x - corner[0].x) * (from.y- to.y) / (from.x - to.x);
+	}
+	
+	//cout << corner[0].x << " " << corner[0].y << "\n"
 
-	cout << corner[0].x << " " << corner[0].y << "\n";
 	cost = totalDanger(from, to, corner, 1, danPt, m);
 
 	while(curStep > minStep)
@@ -318,6 +326,7 @@ point findCorner(point from, point to, int n, point* danPt, int m, double maxD, 
 			break;
 	}
 	
+
 	//cout << "opt: " << corner[0].x << " " << corner[0].y << "\n--> " << cost << "\n\n";
 	
 	corner[0].x = static_cast<int>(corner[0].x);
