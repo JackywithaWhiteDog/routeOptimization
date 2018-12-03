@@ -8,7 +8,6 @@ using namespace std;
  
 // <Constant Values>
 //*****************************************************
-const int MAX_CORNER = 2;
 const double MAX_T = 980;
 const int unit = 1;
 const int reso = 4;
@@ -42,6 +41,8 @@ Point s, e;
 vector<Point> sol;
 double** map;
 Point upper, lower;
+int maxCorner;
+bool randomMod;
 //*****************************************************
  
 // <Functions Header>
@@ -51,8 +52,12 @@ int random(int lower, int upper) { return static_cast<int>((upper-lower)*1.0*ran
 
 // input information
 void inputInfo();
+void init();
 void createMap();
  
+void randomFind();
+void exhaustion();
+
 double lnDanger(Point from, Point to, double firstD);
 double ttDanger(vector<Point> corner);
 void outputSol();
@@ -63,6 +68,8 @@ int main()
     srand(time(NULL));
 
     inputInfo();
+
+    init();
  
     createMap();
  
@@ -74,34 +81,14 @@ int main()
     //  }
     //  cout << "\n";
     // }
- 
-    // double optCost = INT_MAX;
-    // double curTime = 1000*clock()/CLOCKS_PER_SEC;
-    // double dt = 0;
-    // do
-    // {
-    //     vector<Point> tempSol;
-    //     Point pt(random(lower.x, upper.x), random(lower.x, upper.x));
-    //     tempSol.push_back(pt);
-    //     for(int i = 0; i < MAX_CORNER-1; i++)
-    //     {
-    //         pt = {1.0*random(min(pt.x, e.x), max(pt.x, e.x)), 1.0*random(min(pt.y, e.y), max(pt.y, e.y))};
-    //         //cout << pt.x << " " << pt.y;
-    //         tempSol.push_back(pt);
-    //     }
-    //     double cost = ttDanger(tempSol);
+    
 
-    //     if(cost < optCost)
-    //     {
-    //         optCost = cost;
-    //         sol.clear();
-    //         sol.assign(tempSol.begin(), tempSol.end());
-    //     }
+    if(randomMod)
+        randomFind();
+    else
+         exhaustion();
 
-    //     dt = 1000*clock()/CLOCKS_PER_SEC - curTime;
-    //     curTime = 1000*clock()/CLOCKS_PER_SEC;
-    // }while(curTime+dt < MAX_T);
-    // outputSol();
+    outputSol();
  
     return 0;
 }
@@ -145,25 +132,100 @@ void inputInfo()
     }
      
     cin >> s.x >> s.y >> e.x >> e.y;
-
-    upper = {floor(min((s.x+e.x)/2+d*0.35, 1.0*n)+0.5), floor(min((s.y+e.y)/2-d*0.35, 1.0*n)+0.5)};
-    lower = {floor(max((s.x+e.x)/2-d*0.35, 0.0)+0.5), floor(max((s.y+e.y)/2-d*0.35, 0.0)+0.5)};
 }
- 
+
+void init()
+{
+    int x = abs(s.x-e.x);
+    int y = abs(s.y-e.y);
+    if(((w>150)&&(w<200)&&(x*y<600)) || ((x*y>900)&&((y>75)||((y>25)&&(y<50)&&(w>750)))) || ((w>500)&&(w<750)&&(x*y<300)))
+        maxCorner = 1;
+    else if(((x<15)&&(x*y>600)&&(x*y<800)) || ((w<100)&&((y<20)||(y>100))) || ((x*y>900)&&(y>50)&&(y<75)))
+        maxCorner = 3;
+    else if((x>50)&&(x<75)&&(y<20)&&(w<750))
+        maxCorner = 4;
+    else
+        maxCorner = 2;
+
+    if(maxCorner != 1)
+    {
+        randomMod = true;
+        upper = {floor(min((s.x+e.x)/2+d*0.35, 1.0*n)+0.5), floor(min((s.y+e.y)/2+d*0.35, 1.0*n)+0.5)};
+        lower = {floor(max((s.x+e.x)/2-d*0.35, 0.0)+0.5), floor(max((s.y+e.y)/2-d*0.35, 0.0)+0.5)};
+    }
+    else
+    {
+        randomMod = false;
+        upper = {1.0*n, 1.0*n};
+        lower = {0.0, 0.0};
+    }
+}
+
 void createMap()
 {
-    map = new double* [static_cast<int>(reso*(upper.x-lower.x)+1)];
+    map = new double* [static_cast<int>(reso*(upper.x-lower.x))+1];
     for(int i = 0; i <= static_cast<int>(reso*(upper.x-lower.x)); i++)
     {
-        map[i] = new double [static_cast<int>(reso*(upper.y-lower.y)+1)];
+        map[i] = new double [static_cast<int>(reso*(upper.y-lower.y))+1];
         for(int j = 0; j <= static_cast<int>(reso*(upper.y-lower.y)); j++)
         {
-            Point pt(1.0*(i+lower.x)/reso, 1.0*(j+lower.y)/reso);
+            Point pt(1.0*i/reso+lower.x, 1.0*j/reso+lower.y);
             map[i][j] = pt.danger();
         }
     }
 }
+
+void randomFind()
+{
+    double optCost = INT_MAX;
+    double curTime = 1000*clock()/CLOCKS_PER_SEC;
+    double dt = 0;
+    do
+    {
+        vector<Point> tempSol;
+        Point pt(random(lower.x, upper.x), random(lower.x, upper.x));
+        tempSol.push_back(pt);
+        for(int i = 0; i < maxCorner-1; i++)
+        {
+            pt = {1.0*random(min(pt.x, e.x), max(pt.x, e.x)), 1.0*random(min(pt.y, e.y), max(pt.y, e.y))};
+            //cout << pt.x << " " << pt.y;
+            tempSol.push_back(pt);
+        }
+        double cost = ttDanger(tempSol);
+
+        if(cost < optCost)
+        {
+            optCost = cost;
+            sol.clear();
+            sol.assign(tempSol.begin(), tempSol.end());
+        }
+
+        dt = 1000*clock()/CLOCKS_PER_SEC - curTime;
+        curTime = 1000*clock()/CLOCKS_PER_SEC;
+    }while(curTime+dt < MAX_T);
+}
+
+void exhaustion()
+{
+    double optCost = INT_MAX;
  
+    for(unsigned int i = 0; i <= n; i++)
+        for(unsigned int j = 0; j <= n; j++)
+        {
+            vector<Point> tempSol;
+            Point pt(1.0*i, 1.0*j);
+            tempSol.push_back(pt);
+            double cost = ttDanger(tempSol);
+            //cout << pt.x << " " << pt.y << " -> " << cost << "\n";
+            if(cost < optCost)
+            {
+                optCost = cost;
+                sol.clear();
+                sol.push_back(pt);
+            }
+        }
+}
+
 // return the danger of a line
 double lnDanger(Point from, Point to, double firstD)
 {
